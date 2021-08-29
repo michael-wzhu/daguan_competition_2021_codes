@@ -5,12 +5,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-datasets/*
+datasets/news_corpus/*
 experiments/*
 resources/*
 *.txt
 *.tsv
 *.csv
+cached*
 
 # C extensions
 *.so
