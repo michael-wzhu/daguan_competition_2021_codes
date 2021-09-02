@@ -39,7 +39,7 @@ from torch import nn
 from torch.nn import CrossEntropyLoss
 import torch.nn.functional as F
 
-from src.bert_models.models.classifier import Classifier
+from src.bert_models.models.classifier import Classifier, MultiSampleClassifier
 from src.bert_models.models.file_utils import cached_path
 from src.bert_models.training.dice_loss import DiceLoss
 from src.bert_models.training.focal_loss import FocalLoss
@@ -1197,11 +1197,19 @@ class ClsNezha(BertPreTrainedModel):
         #     input_dim=self.args.hidden_size * len(self.aggregator_names),
         #     num_labels=self.num_labels_level_1,
         # )
-        self.classifier_level_2 = Classifier(
-            args,
-            input_dim=self.args.hidden_size,
-            num_labels=self.num_labels_level_2,
-        )
+        if self.args.use_ms_dropout:
+            self.classifier_level_2 = MultiSampleClassifier(
+                args,
+                input_dim=self.args.hidden_size,
+                num_labels=self.num_labels_level_2,
+            )
+        else:
+
+            self.classifier_level_2 = Classifier(
+                args,
+                input_dim=self.args.hidden_size,
+                num_labels=self.num_labels_level_2,
+            )
 
         # class weights
         class_weights_level_1 = []

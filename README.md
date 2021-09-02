@@ -81,4 +81,4 @@ nohup python src/bert_models/training/main.py
 |          NEZHA-base-wwm +  ce + NTXENT loss (系数0.1, gamma 0.5)                |       0.538         |  
 |          NEZHA-base-wwm +  ce + NTXENT loss (系数0.5, gamma 0.5)                |       0.530         |  
 |          NEZHA-base-wwm +  ce + NTXENT loss (系数0.5, gamma 0.07)                |       0.526         |  
-|          NEZHA-base-wwm +  multi-sample dropout                 |       0.543         |  
+|          NEZHA-base-wwm +  multi-sample dropout (num=4, sum)                |       0.543         |  

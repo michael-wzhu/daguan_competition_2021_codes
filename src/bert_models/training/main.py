@@ -169,6 +169,18 @@ if __name__ == '__main__':
         help="temperature for contrastive loss"
     )
 
+    # for multi-sample dropout
+    parser.add_argument("--use_ms_dropout", action="store_true",
+                        help="whether to use multi-sample dropout; ")
+    parser.add_argument(
+        "--dropout_num", default=4, type=int,
+        help="how many dropout samples to draw;"
+    )
+    parser.add_argument(
+        "--ms_average", action="store_true",
+        help="whether to average the logits from multiple dropout samples or just adding them up;"
+    )
+
     # ----------------------------------------------------------------------
 
     args = parser.parse_args()

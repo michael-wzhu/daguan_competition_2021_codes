@@ -40,5 +40,6 @@ class MultiSampleClassifier(nn.Module):
                 logits += temp_logits
 
         # 相加还是求平均？
-        logits = logits / self.args.dropout_num
-        return self.linear(x)
+        if self.args.ms_average:
+            logits = logits / self.args.dropout_num
+        return logits

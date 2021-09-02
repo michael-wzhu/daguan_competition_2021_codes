@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from transformers import BertPreTrainedModel, BertModel, BertConfig
 
 from src.bert_models.models.modeling_nezha import BertModel as NezhaModel
-from src.bert_models.models.classifier import Classifier
+from src.bert_models.models.classifier import Classifier, MultiSampleClassifier
 
 from src.classic_models.models.aggregator_layer import AggregatorLayer
 from src.classic_models.models.encoders import BiLSTMEncoder
@@ -58,11 +58,19 @@ class ClsBERT(BertPreTrainedModel):
         #     input_dim=self.args.hidden_size * len(self.aggregator_names),
         #     num_labels=self.num_labels_level_1,
         # )
-        self.classifier_level_2 = Classifier(
-            args,
-            input_dim=self.args.hidden_size,
-            num_labels=self.num_labels_level_2,
-        )
+        if self.args.use_ms_dropout:
+            self.classifier_level_2 = MultiSampleClassifier(
+                args,
+                input_dim=self.args.hidden_size,
+                num_labels=self.num_labels_level_2,
+            )
+        else:
+
+            self.classifier_level_2 = Classifier(
+                args,
+                input_dim=self.args.hidden_size,
+                num_labels=self.num_labels_level_2,
+            )
 
         # class weights
         class_weights_level_1 = []
