@@ -69,16 +69,17 @@ nohup python src/bert_models/training/main.py
 | ------------ |  -------------- | 
 |          官方baseline：   word2vec + bilstm                |        0.392         |
 |          随机word2vec + bilstm +  max-pool               |        0.491  |                        |
-|          随机word2vec + bilstm +  slf_attn_pool               |        0.49267002199706494  |                        |
+|              - + slf_attn_pool               |        0.49267002199706494  |                        |
 |          预训练word2vec + bilstm +  max-pool               |       0.5013160507998644         |                    |
-|          预训练word2vec + bilstm +  slf_attn_pool               |       0.4972518334336293         |  
+|           -  +  slf_attn_pool               |       0.4972518334336293         |  
 |          BERT-base + 随机初始化embedding               |       0.505         |  
-|          BERT-base + 词汇表词频对应               |       0.515         |  
+|             - + 词汇表词频对应               |       0.515         |  
 |          BERT-wwm-ext + 词汇表词频对应               |       0.524         |  
-|          BERT-wwm-ext + sample weights               |       0.535         |  
-|          BERT-wwm-ext + ce + NTXENT loss               |       0.533         |  
+|            -   多种pooling操作一起使用               |       0.528         |  
+|          - + sample weights               |       0.535         |  
+|          - + ce + NTXENT loss               |       0.533         |  
 |          NEZHA-base-wwm +  词汇表词频对应                |       0.535         |  
-|          NEZHA-base-wwm +  ce + NTXENT loss (系数0.1, gamma 0.5)                |       0.538         |  
-|          NEZHA-base-wwm +  ce + NTXENT loss (系数0.5, gamma 0.5)                |       0.530         |  
-|          NEZHA-base-wwm +  ce + NTXENT loss (系数0.5, gamma 0.07)                |       0.526         |  
-|          NEZHA-base-wwm +  multi-sample dropout (num=4, sum)                |       0.543         |  
+|          - +  ce + NTXENT loss (系数0.1, gamma 0.5)                |       0.538         |  
+|          - +  ce + NTXENT loss (系数0.5, gamma 0.5)                |       0.530         |  
+|          - +  ce + NTXENT loss (系数0.5, gamma 0.07)                |       0.526         |  
+|          - +  multi-sample dropout (num=4, sum)                |       0.543         |  
