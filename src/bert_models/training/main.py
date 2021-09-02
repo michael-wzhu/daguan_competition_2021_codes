@@ -114,8 +114,9 @@ if __name__ == '__main__':
                         help="metric name for early stopping ")
 
     # 可以选择用不同的aggregator
-    parser.add_argument("--aggregator_names", default="bert_pool", type=str,
-                        help="Model type selected in the list: [bert_pooler, slf_attn_pooler, max_pooler, avg_pooler, dr_pooler, ] ")
+    parser.add_argument("--aggregator_names", default="bert_pooler", type=str,
+                        help="Model type selected in the list: "
+                             "[bert_pooler, slf_attn_pooler, max_pooler, avg_pooler, dr_pooler, ] ")
 
     # 针对不均衡样本
 

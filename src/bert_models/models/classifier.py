@@ -42,4 +42,5 @@ class MultiSampleClassifier(nn.Module):
         # 相加还是求平均？
         if self.args.ms_average:
             logits = logits / self.args.dropout_num
+
         return logits

@@ -149,7 +149,6 @@ class Trainer(object):
         # linear层 + 初始化的aggregator部分
         classifier_params = list(self.model.classifier_level_2.named_parameters()) + \
                             list(self.model.aggregators.named_parameters())
-
         no_decay = ['bias', 'LayerNorm.weight']
         optimizer_grouped_parameters += [
             {'params': [p for n, p in classifier_params if not any(nd in n for nd in no_decay)],
@@ -162,6 +161,7 @@ class Trainer(object):
              }
         ]
 
+        # lamb
         optimizer = AdamW(optimizer_grouped_parameters,
                           lr=self.args.learning_rate,
                           eps=self.args.adam_epsilon)

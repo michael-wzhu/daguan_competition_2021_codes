@@ -1316,6 +1316,7 @@ class ClsNezha(BertPreTrainedModel):
                 if self.args.what_to_contrast == "sample":
                     embeddings = pooled_outputs
                     labels = label_ids_level_2.view(-1)
+
                 elif self.args.what_to_contrast == "sample_and_class_embeddings":
                     embeddings = torch.cat(
                         [pooled_outputs, self.classifier_level_2.linear.weight],

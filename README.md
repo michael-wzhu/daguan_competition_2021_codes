@@ -82,4 +82,6 @@ nohup python src/bert_models/training/main.py
 |          - +  ce + NTXENT loss (系数0.1, gamma 0.5)                |       0.538         |  
 |          - +  ce + NTXENT loss (系数0.5, gamma 0.5)                |       0.530         |  
 |          - +  ce + NTXENT loss (系数0.5, gamma 0.07)                |       0.526         |  
-|          - +  multi-sample dropout (num=4, sum)                |       0.543         |  
+|          - +  multi-sample dropout (0.4, num=4, sum)                |       0.543         |  
+|          - +  multi-sample dropout (num=4, average)                |       0.xxx?         |  
+|          - +  multi-sample dropout (num=8, average)                |       0.xxx?         |  
