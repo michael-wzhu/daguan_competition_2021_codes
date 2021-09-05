@@ -1,5 +1,16 @@
+## daguan_competition_2021_codes
 
-## 数据处理：
+
+This repository contains the code and pre-trained models for participating [达观杯2021风险标签识别比赛](https://www.datafountain.cn/competitions/512).
+
+**************************** **Updates** ****************************
+
+<!-- Thanks for your interest in our repo! -->
+
+* 2021/09/05: 开源第一版预训练模型(BERT-base, 预训练120k steps) [daguan-bert-base-v0] (https://pan.baidu.com/s/1LDBEs7mduUPldWjqszkzzQ). (提取码：t0bc)
+
+
+### 数据处理：
 ```bash
 
 # 统计标签信息
@@ -13,7 +24,7 @@ src/data_proc/split_datasets.py
 
 ```
 
-## 词频对应
+### 词频对应
 
 本题采用脱敏文本，所以我们需要将词汇与开源BERT词汇对应，得到明文数据
 
@@ -28,7 +39,7 @@ src/bert_models/vocab_process/get_vocab_mapping.py
 ```
 
 
-## 训练示例：
+### 训练示例：
 ```bash
 
 nohup python src/bert_models/training/main.py 
@@ -62,7 +73,7 @@ nohup python src/bert_models/training/main.py
 
 
 
-## Results
+### Results
 模型结果记录: 采用5折交叉验证的平均分
 
 |      模型描述      | dev macro-F1 | 
