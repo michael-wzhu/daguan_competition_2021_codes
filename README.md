@@ -1,13 +1,13 @@
 ## daguan_competition_2021_codes
 
 
-This repository contains the code and pre-trained models for participating [达观杯2021风险标签识别比赛](https://www.datafountain.cn/competitions/512).
+This repository contains our code and pre-trained models for participating [达观杯2021风险标签识别比赛](https://www.datafountain.cn/competitions/512).
 
 **************************** **Updates** ****************************
 
 <!-- Thanks for your interest in our repo! -->
 
-* 2021/09/05: 开源第一版预训练模型(BERT-base, 预训练120k steps) [daguan-bert-base-v0] (https://pan.baidu.com/s/1LDBEs7mduUPldWjqszkzzQ). (提取码：t0bc)
+* 2021/09/05: 开源第一版预训练模型(BERT-base, 预训练120k steps) [daguan-bert-base-v0] (https://pan.baidu.com/s/1LDBEs7mduUPldWjqszkzzQ). (提取码：t0bc) 该模型较NEZHA有显著提升。
 
 
 ### 数据处理：
