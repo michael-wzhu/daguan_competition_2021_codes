@@ -97,6 +97,7 @@ class Encoder(object):
             doc_ids[-1].append(Encoder.tokenizer.eod)
 
         ids["text"] = doc_ids
+        ids["sents"] = doc_ids
 
         return ids, len(json_line)
 

@@ -12,6 +12,9 @@ resources/*
 *.tsv
 *.csv
 cached*
+*.json
+*.jsonl
+*.jsonline
 
 # C extensions
 *.so

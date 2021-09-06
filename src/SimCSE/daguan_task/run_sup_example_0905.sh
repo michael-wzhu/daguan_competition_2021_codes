@@ -20,17 +20,17 @@ python daguan_task/train.py \
     --model_name_or_path ../../resources/daguan_bert_base_v3/steps_120k \
     --train_file ../../datasets/phase_1/splits/fold_0_nli/nli_for_simcse.csv \
     --output_dir result/daguan_task_sup_0905_0 \
-    --num_train_epochs 2 \
-    --per_device_train_batch_size 4 \
+    --num_train_epochs 4 \
+    --per_device_train_batch_size 8 \
     --learning_rate 5e-5 \
     --max_seq_length 256 \
     --evaluation_strategy steps \
     --metric_for_best_model avg_transfer \
     --load_best_model_at_end \
-    --eval_steps 25 \
+    --eval_steps 500 \
     --pooler_type cls \
     --overwrite_output_dir \
-    --temp 0.05 \
+    --temp 0.1 \
     --do_train \
     --do_eval \
     --evaluation_strategy steps \

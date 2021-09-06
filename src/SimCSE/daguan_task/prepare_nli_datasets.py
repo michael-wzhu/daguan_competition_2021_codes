@@ -53,7 +53,6 @@ def get_label_name2sents(train_data_path):
     return dict_label_name2sents_new
 
 
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument(

@@ -45,3 +45,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --fp16 \
        --checkpoint-activations \
        --activations-checkpoint-method uniform
+
+
+# gradient_checkpointing:

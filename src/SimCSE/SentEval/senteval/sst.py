@@ -132,7 +132,8 @@ class DaguanEval(object):
         with io.open(fpath, 'r', encoding='utf-8') as f:
             for line in f:
                 if self.nclasses == 35:
-                    sample = line.strip().split('\t')
+                    sample = line.strip().split(',')
+                    # print(sample)
 
                     if len(sample) == 2:
                         sst_data['y'].append(0)
