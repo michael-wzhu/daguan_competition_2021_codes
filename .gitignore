@@ -6,6 +6,7 @@ __pycache__/
 *$py.class
 
 datasets/news_corpus/*
+datasets/*
 experiments/*
 resources/*
 *.txt
