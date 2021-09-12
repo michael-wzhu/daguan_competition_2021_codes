@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import random
 import time
 import warnings
 
@@ -15,6 +16,7 @@ from transformers import AdamW, get_polynomial_decay_schedule_with_warmup, \
     get_cosine_with_hard_restarts_schedule_with_warmup
 
 from src.bert_models.models.modeling_nezha import BertModel as NezhaModel
+from src.bert_models.training.at_training import FGM, PGD
 from src.bert_models.training.configs import MODEL_CLASSES
 from src.bert_models.training.utils import compute_metrics, get_labels
 
@@ -81,6 +83,28 @@ class Trainer(object):
         self.patience = args.patience
         self.early_stopping_counter = 0
         self.do_early_stop = False
+
+        # for adversarial training
+        self.adv_trainer = None
+        if self.args.at_method:
+            if self.args.at_method == "fgm":
+                self.adv_trainer = FGM(
+                    self.model,
+                    epsilon=self.args.epsilon_for_at,
+                    emb_names=self.args.emb_names.split(","),
+                )
+
+            elif self.args.at_method == "pgd":
+                self.adv_trainer = PGD(
+                    self.model,
+                    epsilon=self.args.epsilon_for_at,
+                    alpha=self.args.alpha_for_at,
+                    emb_names=self.args.emb_names.split(","),
+                )
+            else:
+                raise ValueError(
+                    "un-supported adversarial training method: {} !!!".format(self.args.at_method)
+                )
 
     def train(self):
         if self.args.use_weighted_sampler:
@@ -219,7 +243,45 @@ class Trainer(object):
                 if self.args.gradient_accumulation_steps > 1:
                     loss = loss / self.args.gradient_accumulation_steps
 
+                # 正常的梯度回传
                 loss.backward()
+
+                # 判断是否做对抗训练
+                if self.args.at_method is not None:
+                    if random.uniform(0, 1) <= self.args.at_rate:
+                        logger.info(" do adv training at this step!")
+
+                        if self.args.at_method == "fgm":
+                            self.adv_trainer.backup_grad()
+                            # 实施对抗
+                            self.adv_trainer.attack()
+                            # 梯度清零，用于计算在对抗样本处的梯度
+                            self.model.zero_grad()
+
+                            outputs_at = self.model(**inputs)
+                            loss_at = outputs_at[0]
+                            loss_at.backward()
+
+                            # embedding(被攻击的模块)的梯度回复原值，其他部分梯度累加，
+                            # 这样相当于综合了两步优化的方向
+                            self.adv_trainer.restore_grad()
+
+                            # 恢复Embedding的参数
+                            self.adv_trainer.restore()
+
+                        elif self.args.at_method == "pgd":
+                            self.adv_trainer.backup_grad()  # 保存正常的grad
+
+                            # 对抗训练
+                            for t in range(self.args.steps_for_at):
+                                self.adv_trainer.attack(is_first_attack=(t == 0))
+                                self.model.zero_grad()
+                                outputs_at = self.model(**inputs)
+                                loss_at = outputs_at[0]
+                                loss_at.backward()
+
+                            self.adv_trainer.restore_grad()
+                            self.adv_trainer.restore()
 
                 tr_loss += loss.item()
                 if (step + 1) % self.args.gradient_accumulation_steps == 0:
@@ -299,6 +361,15 @@ class Trainer(object):
         out_label_ids_level_1 = None
         out_label_ids_level_2 = None
 
+        # 存储每层的结果
+        layer_idx2preds_level_2 = None
+        if "pabee" in self.args.model_type:
+            layer_idx2preds_level_2 = {
+                layer_idx: None
+                for layer_idx in range(self.config.num_hidden_layers)
+            }
+
+
         self.model.eval()
 
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
@@ -313,6 +384,8 @@ class Trainer(object):
                     inputs['token_type_ids'] = batch[2]
                 outputs = self.model(**inputs)
                 tmp_eval_loss, logits_level_2 = outputs[:2]
+
+
                 eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
 
@@ -324,6 +397,19 @@ class Trainer(object):
                 preds_level_2 = np.append(preds_level_2, logits_level_2.detach().cpu().numpy(), axis=0)
                 out_label_ids_level_2 = np.append(
                     out_label_ids_level_2, inputs['label_ids_level_2'].detach().cpu().numpy(), axis=0)
+
+            # label prediction for each layer
+            if "pabee" in self.args.model_type:
+                all_logits_level_2 = outputs[2]
+                for i, logits_ix in enumerate(all_logits_level_2):
+                    if not layer_idx2preds_level_2[i]:
+                        layer_idx2preds_level_2[i] = logits_ix.detach().cpu().numpy()
+                    else:
+                        layer_idx2preds_level_2[i] = np.append(
+                            layer_idx2preds_level_2[i],
+                            logits_ix.detach().cpu().numpy(),
+                            axis=0
+                        )
 
         eval_loss = eval_loss / nb_eval_steps
         results = {
@@ -337,9 +423,26 @@ class Trainer(object):
         for key_, val_ in results_level_2.items():
             results[key_ + "__level_2"] = val_
 
+
+        ############################
+        # 对每层输出一个
+        ############################
+        if "pabee" in self.args.model_type:
+
+            for layer_idx in range(self.config.num_hidden_layers):
+                preds = layer_idx2preds_level_2[layer_idx]
+
+                # label prediction result at layer "layer_idx"
+                preds = np.argmax(preds, axis=1)
+
+                results_idx = compute_metrics(preds, out_label_ids_level_2)
+                for key_, val_ in results_idx.items():
+                    results[key_ + "__level_2" + "__layer_{}".format(layer_idx)] = val_
+
         logger.info("***** Eval results *****")
         for key in sorted(results.keys()):
-            logger.info("  %s = %s", key, str(results[key]))
+            if "macro" in key:
+                logger.info("  %s = %s", key, str(results[key]))
 
         # 将预测结果写入文件
         if mode == "test":
@@ -350,6 +453,23 @@ class Trainer(object):
             for i, pred_label_id in enumerate(list_preds_level_2):
                 pred_label_name_level_2 = self.label_list_level_2[pred_label_id]
                 f_out.write("%s,%s" % (str(i), str(pred_label_name_level_2)) + "\n")
+
+        if "pabee" in self.args.model_type:
+            if mode == "test":
+
+                for layer_idx in range(self.config.num_hidden_layers):
+                    f_out = open(os.path.join(self.args.model_dir, "test_predictions_layer_{}.csv".format(layer_idx)), "w", encoding="utf-8")
+                    f_out.write("id,label" + "\n")
+
+                    preds = layer_idx2preds_level_2[layer_idx]
+
+                    # label prediction result at layer "layer_idx"
+                    preds = np.argmax(preds, axis=1)
+
+                    list_preds = preds.tolist()
+                    for i, pred_label_id in enumerate(list_preds):
+                        pred_label_name_level_2 = self.label_list_level_2[pred_label_id]
+                        f_out.write("%s,%s" % (str(i), str(pred_label_name_level_2)) + "\n")
 
         return results
 

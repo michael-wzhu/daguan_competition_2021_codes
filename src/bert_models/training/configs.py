@@ -5,10 +5,12 @@ from src.bert_models.models import ClsBERT
 from transformers import BertConfig, BertTokenizer
 
 from src.bert_models.models import ClsBERT
+from src.bert_models.models.modeling_bert_pabee import ClsBERTWithPABEE
 from src.bert_models.models.modeling_nezha import ClsNezha
 
 MODEL_CLASSES = {
     'bert': (BertConfig, ClsBERT, BertTokenizer),
+    'bert_pabee': (BertConfig, ClsBERTWithPABEE, BertTokenizer),
     'nezha': (BertConfig, ClsNezha, BertTokenizer),
 }
 

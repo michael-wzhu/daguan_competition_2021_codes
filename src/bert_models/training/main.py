@@ -182,11 +182,22 @@ if __name__ == '__main__':
         help="whether to average the logits from multiple dropout samples or just adding them up;"
     )
 
-    # for 对抗训练
+    # for adversarial training
     parser.add_argument("--at_method", default=None, type=str,
-                        help="which adversarial training method to use: "
-                             "(1) 'ntxent_loss';"
-                             "(2) 'supconloss';")
+                        help="aversarial training should be in type selected in the list: [fgm, pgd, None]；"
+                             "if None, no aversarial training")
+    parser.add_argument(
+        "--emb_names", default="word_embedding", type=str,
+        help="params to attack during aversarial training; combined with comma"
+    )
+    parser.add_argument("--at_rate", default=0.5, type=float,
+                        help="for a fraction of iterations, do at training;")
+    parser.add_argument("--epsilon_for_at", default=0.5, type=float,
+                        help="epsilon coefficient for adv training: step size")
+    parser.add_argument("--alpha_for_at", default=0.5, type=float,
+                        help="alpha coefficient for adv training: step size for PGD ")
+    parser.add_argument("--steps_for_at", default=3, type=int,
+                        help="num of steps at each adv sample: for PGD ")
 
     # ----------------------------------------------------------------------
 

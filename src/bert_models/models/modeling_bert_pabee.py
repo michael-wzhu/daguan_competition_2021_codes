@@ -6,24 +6,32 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pytorch_metric_learning.distances import DotProductSimilarity
-from pytorch_metric_learning.losses import NTXentLoss, SupConLoss
-from transformers import BertPreTrainedModel, BertModel, BertConfig
+from transformers import BertPreTrainedModel, BertModel
+from transformers.models.bert.modeling_bert import BertEncoder
 
-from src.bert_models.models.modeling_nezha import BertModel as NezhaModel
 from src.bert_models.models.classifier import Classifier, MultiSampleClassifier
 from src.bert_models.training.dice_loss import DiceLoss
 from src.bert_models.training.focal_loss import FocalLoss
-
 from src.classic_models.models.aggregator_layer import AggregatorLayer
 from src.classic_models.models.encoders import BiLSTMEncoder
-
-
 
 logger = logging.getLogger(__name__)
 
 
-class ClsBERT(BertPreTrainedModel):
+class BertEncoderWithPabee(BertEncoder):
+    def adaptive_forward(self, hidden_states, current_layer, attention_mask=None, head_mask=None):
+        layer_outputs = self.layer[current_layer](
+            hidden_states,
+            attention_mask,
+            head_mask[current_layer],
+        )
+
+        hidden_states = layer_outputs[0]
+
+        return hidden_states
+
+
+class ClsBERTWithPABEE(BertPreTrainedModel):
     def __init__(self, config,
                  args,
                  label_list_level_1,
@@ -31,8 +39,10 @@ class ClsBERT(BertPreTrainedModel):
                  label2freq_level_1,
                  label2freq_level_2,
                  ):
-        super(ClsBERT, self).__init__(config)
+        super(ClsBERTWithPABEE, self).__init__(config)
         self.args = args
+        self.config = config
+
         self.args.hidden_size = config.hidden_size
         self.args.hidden_dim = config.hidden_size
 
@@ -67,6 +77,7 @@ class ClsBERT(BertPreTrainedModel):
         #     input_dim=self.args.hidden_size * len(self.aggregator_names),
         #     num_labels=self.num_labels_level_1,
         # )
+
         if self.args.use_ms_dropout:
             self.classifier_level_2 = MultiSampleClassifier(
                 args,
@@ -122,23 +133,33 @@ class ClsBERT(BertPreTrainedModel):
         sequence_output = outputs[0]
         bert_pooled_output = outputs[1]  # [CLS]
 
+        # 每层的隐含状态
+        all_hidden_states = outputs[2]
+        assert len(all_hidden_states) == self.config.num_hidden_layers
 
-        list_pooled_outpts = []
-        if "bert_pooler" in self.aggregator_names:
-            list_pooled_outpts.append(bert_pooled_output)
+        # 每层的池化结果;
+        all_pooled_outputs = []
+        for i in range(self.config.num_hidden_layers):
+            hid_state = all_hidden_states[i]
+            bert_pooled_output = self.bert.pooler(hid_state)
 
-        for aggre_op in self.aggregators:
-            pooled_outputs_ = aggre_op(sequence_output, mask=attention_mask)
-            list_pooled_outpts.append(pooled_outputs_)
+            list_pooled_outpts = []
+            if "bert_pooler" in self.aggregator_names:
+                list_pooled_outpts.append(bert_pooled_output)
+            for aggre_op in self.aggregators:
+                pooled_outputs_ = aggre_op(sequence_output, mask=attention_mask)
+                list_pooled_outpts.append(pooled_outputs_)
+            pooled_outputs = sum(list_pooled_outpts)
+            all_pooled_outputs.append(pooled_outputs)
 
-        pooled_outputs = sum(list_pooled_outpts)
+        # 每层的logits
+        all_logits = []
+        for i in range(self.config.num_hidden_layers):
+            logits = self.classifier_level_2(all_pooled_outputs[i])
+            all_logits.append(logits)
 
-        # print("pooled_outputs: ", pooled_outputs.shape)
-
-        # 分类层： level 2
-        logits_level_2 = self.classifier_level_2(pooled_outputs)  # [bsz, self.num_labels_level_2]
-
-        outputs = (logits_level_2,)  # add hidden states and attention if they are here
+        outputs = (all_logits,)
+        outputs = (all_logits[-1],) + outputs
 
         # 1. loss
         if label_ids_level_2 is not None:
@@ -166,56 +187,20 @@ class ClsBERT(BertPreTrainedModel):
             else:
                 loss_fct = nn.CrossEntropyLoss(weight=weight)
 
-            loss_level_2 = loss_fct(
-                logits_level_2.view(-1, self.num_labels_level_2),
-                label_ids_level_2.view(-1)
-            )
+            total_loss = None
+            total_weights = 0
 
-            # 基于对比学习的损失计算
-            if self.args.contrastive_loss is not None:
-                if self.args.contrastive_loss == "ntxent_loss":
-                    loss_fct_contrast = NTXentLoss(
-                        temperature=self.args.contrastive_temperature,
-                        distance=DotProductSimilarity(),
-                    )
-                elif self.args.contrastive_loss == "supconloss":
-                    loss_fct_contrast = SupConLoss(
-                        temperature=self.args.contrastive_temperature,
-                        distance=DotProductSimilarity(),
-                    )
-                else:
-                    raise ValueError("unsupported contrastive loss function: {}".format(self.args.use_contrastive_loss))
-
-                if self.args.what_to_contrast == "sample":
-                    embeddings = pooled_outputs
-                    labels = label_ids_level_2.view(-1)
-
-                elif self.args.what_to_contrast == "sample_and_class_embeddings":
-                    embeddings = torch.cat(
-                        [pooled_outputs, self.classifier_level_2.linear.weight],
-                        dim=0
-                    )
-                    labels = torch.cat(
-                        [
-                            label_ids_level_2.view(-1),
-                            torch.arange(0, self.num_labels_level_2).to(self.args.device)
-                        ],
-                        dim=-1
-                    )
-                else:
-                    raise ValueError("unsupported contrastive features: {}".format(self.args.what_to_contrast))
-
-                contra_loss_level_2 = loss_fct_contrast(
-                    embeddings,
-                    labels
+            for ix, logits_item in enumerate(all_logits):
+                loss_ix = loss_fct(
+                    logits_item.view(-1, self.num_labels_level_2),
+                    label_ids_level_2.view(-1)
                 )
+                if total_loss is None:
+                    total_loss = loss_ix
+                else:
+                    total_loss += loss_ix * (ix + 1)
+                total_weights += ix + 1
 
-                logger.info("ce loss: {}; contrastive loss: {}".format(
-                    loss_level_2, contra_loss_level_2
-                ))
-                loss_level_2 = loss_level_2 + \
-                               self.args.ntxent_loss_weight * contra_loss_level_2
-
-            outputs = (loss_level_2,) + outputs
+            outputs = (total_loss / total_weights,) + outputs
 
         return outputs
