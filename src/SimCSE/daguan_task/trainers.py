@@ -122,22 +122,24 @@ class CLTrainer(Trainer):
                                             'tenacity': 3, 'epoch_size': 2}
 
         se = senteval.engine.SE(params, batcher, prepare)
-        tasks = []
+        tasks = ["DaguanRelatedness"]
         if eval_senteval_transfer or self.args.eval_transfer:
-            tasks = ['Daguan', ]
+            tasks = ["DaguanRelatedness", 'DaguanCLS', ]
         self.model.eval()
         results = se.eval(tasks)
 
-        metrics = {}
+        sickr_spearman = results['DaguanRelatedness']['dev']['spearman'][0]
+
+        metrics = {"sickr_spearman": sickr_spearman}
         if eval_senteval_transfer or self.args.eval_transfer:
             avg_transfer = 0
             for task in tasks:
-                avg_transfer += results[task]['devacc']
-                metrics['eval_{}'.format(task)] = results[task]['devacc']
+                if results[task].get('devacc'):
+                    avg_transfer += results[task]['devacc']
+                    metrics['eval_{}'.format(task)] = results[task]['devacc']
 
             avg_transfer = avg_transfer / len(tasks)
             metrics['eval_avg_transfer'] = avg_transfer
-
 
         self.log(metrics)
         return metrics

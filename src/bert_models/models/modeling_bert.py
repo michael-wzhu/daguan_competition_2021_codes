@@ -1,17 +1,25 @@
+# -*- coding: utf-8 -*-
 
+import logging
 import math
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pytorch_metric_learning.distances import DotProductSimilarity
+from pytorch_metric_learning.losses import NTXentLoss, SupConLoss
 from transformers import BertPreTrainedModel, BertModel, BertConfig
 
 from src.bert_models.models.modeling_nezha import BertModel as NezhaModel
 from src.bert_models.models.classifier import Classifier, MultiSampleClassifier
+from src.bert_models.training.dice_loss import DiceLoss
 
 from src.classic_models.models.aggregator_layer import AggregatorLayer
 from src.classic_models.models.encoders import BiLSTMEncoder
 from src.classic_models.training.focal_loss import FocalLoss
+
+
+logger = logging.getLogger(__name__)
 
 
 class ClsBERT(BertPreTrainedModel):
@@ -105,8 +113,11 @@ class ClsBERT(BertPreTrainedModel):
             label_ids_level_1=None,
             label_ids_level_2=None,
             ):
-        outputs = self.bert(input_ids, attention_mask=attention_mask,
-                            token_type_ids=token_type_ids)  # sequence_output, pooled_output, (hidden_states), (attentions)
+        outputs = self.bert(input_ids,
+                            attention_mask=attention_mask,
+                            token_type_ids=token_type_ids,
+                            output_hidden_states=True
+                            )  # sequence_output, pooled_output, (hidden_states), (attentions)
         sequence_output = outputs[0]
         bert_pooled_output = outputs[1]  # [CLS]
 
@@ -126,26 +137,84 @@ class ClsBERT(BertPreTrainedModel):
         # 分类层： level 2
         logits_level_2 = self.classifier_level_2(pooled_outputs)  # [bsz, self.num_labels_level_2]
 
-        outputs = (logits_level_2, )  # add hidden states and attention if they are here
+        outputs = (logits_level_2,)  # add hidden states and attention if they are here
 
         # 1. loss
         if label_ids_level_2 is not None:
-            if self.args.use_focal_loss:
-                loss_fct = FocalLoss(
-                    self.num_labels_level_2,
-                    alpha=self.class_weights_level_2,
-                    gamma=self.args.focal_loss_gamma,
-                    size_average=True
-                )
-            elif self.args.use_class_weights:
-                loss_fct = nn.CrossEntropyLoss(weight=self.class_weights_level_2)
+            if self.args.use_class_weights:
+                weight = self.class_weights_level_2
             else:
-                loss_fct = nn.CrossEntropyLoss()
+                weight = None
+
+            if self.args.loss_fct_name == "focal":
+                loss_fct = FocalLoss(
+                    gamma=self.args.focal_loss_gamma,
+                    alpha=weight,
+                    reduction="mean"
+                )
+            elif self.args.loss_fct_name == "dice":
+                loss_fct = DiceLoss(
+                    with_logits=True,
+                    smooth=1.0,
+                    ohem_ratio=0.8,
+                    alpha=0.01,
+                    square_denominator=True,
+                    index_label_position=True,
+                    reduction="mean"
+                )
+            else:
+                loss_fct = nn.CrossEntropyLoss(weight=weight)
 
             loss_level_2 = loss_fct(
                 logits_level_2.view(-1, self.num_labels_level_2),
                 label_ids_level_2.view(-1)
             )
+
+            # 基于对比学习的损失计算
+            if self.args.contrastive_loss is not None:
+                if self.args.contrastive_loss == "ntxent_loss":
+                    loss_fct_contrast = NTXentLoss(
+                        temperature=self.args.contrastive_temperature,
+                        distance=DotProductSimilarity(),
+                    )
+                elif self.args.contrastive_loss == "supconloss":
+                    loss_fct_contrast = SupConLoss(
+                        temperature=self.args.contrastive_temperature,
+                        distance=DotProductSimilarity(),
+                    )
+                else:
+                    raise ValueError("unsupported contrastive loss function: {}".format(self.args.use_contrastive_loss))
+
+                if self.args.what_to_contrast == "sample":
+                    embeddings = pooled_outputs
+                    labels = label_ids_level_2.view(-1)
+
+                elif self.args.what_to_contrast == "sample_and_class_embeddings":
+                    embeddings = torch.cat(
+                        [pooled_outputs, self.classifier_level_2.linear.weight],
+                        dim=0
+                    )
+                    labels = torch.cat(
+                        [
+                            label_ids_level_2.view(-1),
+                            torch.arange(0, self.num_labels_level_2).to(self.args.device)
+                        ],
+                        dim=-1
+                    )
+                else:
+                    raise ValueError("unsupported contrastive features: {}".format(self.args.what_to_contrast))
+
+                contra_loss_level_2 = loss_fct_contrast(
+                    embeddings,
+                    labels
+                )
+
+                logger.info("ce loss: {}; contrastive loss: {}".format(
+                    loss_level_2, contra_loss_level_2
+                ))
+                loss_level_2 = loss_level_2 + \
+                               self.args.ntxent_loss_weight * contra_loss_level_2
+
             outputs = (loss_level_2,) + outputs
 
         return outputs

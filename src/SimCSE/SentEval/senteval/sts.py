@@ -229,3 +229,38 @@ class SICKRelatednessEval(STSEval):
         sick_data['y'] = [float(s) for s in sick_data['y']]
         self.samples += sick_data['X_A'] + sick_data["X_B"]
         return (sick_data['X_A'], sick_data["X_B"], sick_data['y'])
+
+
+class DaguanRelatednessEval(STSEval):
+    def __init__(self, task_path, seed=1111):
+        logging.debug('\n\n***** Transfer task : SICKRelatedness*****\n\n')
+        self.seed = seed
+        self.samples = []
+        train = self.loadFile(os.path.join(task_path, 'train.txt'))
+        dev = self.loadFile(os.path.join(task_path, 'dev.txt'))
+        test = self.loadFile(os.path.join(task_path, 'test.txt'))
+        self.datasets = ['train', 'dev', 'test']
+        self.data = {'train': train, 'dev': dev, 'test': test}
+
+    def loadFile(self, fpath):
+        skipFirstLine = True
+        sick_data = {'X_A': [], 'X_B': [], 'y': []}
+        with io.open(fpath, 'r', encoding='utf-8') as f:
+            for i, line in enumerate(f):
+                if i == 0:
+                    continue
+
+                # print(line)
+                text = line.strip().split('\t')
+                # print(text)
+                sick_data['X_A'].append(text[0].split())
+                sick_data['X_B'].append(text[1].split())
+                sick_data['y'].append(1.0)
+
+                sick_data['X_A'].append(text[0].split())
+                sick_data['X_B'].append(text[2].split())
+                sick_data['y'].append(0.0)
+
+        sick_data['y'] = [float(s) for s in sick_data['y']]
+        self.samples += sick_data['X_A'] + sick_data["X_B"]
+        return (sick_data['X_A'], sick_data["X_B"], sick_data['y'])

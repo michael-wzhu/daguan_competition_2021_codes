@@ -33,7 +33,7 @@ python train.py \
     --temp 0.05 \
     --do_train \
     --do_eval \
-    --evaluation_strategy steps \
     --fp16 \
     --eval_transfer \
+    --gradient_checkpointing \
     "$@"

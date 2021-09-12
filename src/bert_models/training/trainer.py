@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import json
 import logging
 import os
@@ -177,6 +179,10 @@ class Trainer(object):
         #     num_training_steps=t_total,
         #     power=2
         # )
+
+        swa_model = torch.optim.swa_utils.AveragedModel(self.model)
+        # swa_model = torch.optim.swa_utils.AveragedModel(self.model)
+        swa_scheduler = torch.optim.swa_utils.SWALR(optimizer, swa_lr=0.05)
 
         # Train!
         logger.info("***** Running training *****")

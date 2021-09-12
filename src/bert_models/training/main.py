@@ -182,6 +182,12 @@ if __name__ == '__main__':
         help="whether to average the logits from multiple dropout samples or just adding them up;"
     )
 
+    # for 对抗训练
+    parser.add_argument("--at_method", default=None, type=str,
+                        help="which adversarial training method to use: "
+                             "(1) 'ntxent_loss';"
+                             "(2) 'supconloss';")
+
     # ----------------------------------------------------------------------
 
     args = parser.parse_args()

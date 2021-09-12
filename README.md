@@ -7,7 +7,9 @@ This repository contains our code and pre-trained models for participating [达�
 
 <!-- Thanks for your interest in our repo! -->
 
-* 2021/09/05: 开源第一版预训练模型(BERT-base, 预训练120k steps) [daguan-bert-base-v0] (https://pan.baidu.com/s/1LDBEs7mduUPldWjqszkzzQ). (提取码：t0bc) 该模型较NEZHA有显著提升。
+* 2021/09/12: 开源第二版预训练模型(BERT-base, 预训练150k steps) [daguan-bert-base-v1] (https://pan.baidu.com/s/1YpRf1C7OziM6H34CWYzzrg). (提取码：5ct5)。
+
+* 2021/09/05: 开源第一版预训练模型(BERT-base, 预训练120k steps) [daguan-bert-base-v0] (https://pan.baidu.com/s/1LDBEs7mduUPldWjqszkzzQ). (提取码：t0bc)。
 
 
 ### 数据处理：
@@ -94,5 +96,5 @@ nohup python src/bert_models/training/main.py
 |          - +  ce + NTXENT loss (系数0.5, gamma 0.5)                |       0.530         |  
 |          - +  ce + NTXENT loss (系数0.5, gamma 0.07)                |       0.526         |  
 |          - +  multi-sample dropout (0.4, num=4, sum)                |       0.543         |  
-|          - +  multi-sample dropout (num=4, average)                |       0.xxx?         |  
-|          - +  multi-sample dropout (num=8, average)                |       0.xxx?         |  
+|        daguan-bert-base-v0 (lr: 2e-5)              |       0.5517         |  
+|        daguan-bert-base-v1                |       0.5552         |  

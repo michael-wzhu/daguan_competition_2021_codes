@@ -1,4 +1,4 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
 # 2020.12.18-Changed for rpe in NEZHA model.
 # Huawei Technologies Co., Ltd. <foss@huawei.com> 
 # Copyright 2020 Huawei Technologies Co., Ltd.
