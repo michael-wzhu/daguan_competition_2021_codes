@@ -32,11 +32,11 @@ class FGM(object):
                 self.emb_backup[name] = param.data.clone()
                 norm = torch.norm(param.grad)
                 if norm != 0 and not torch.isnan(norm):
-                    r_at = self.epsilon * param.grad / norm
-                    param.data.add_(r_at)
+                    r_adv = self.epsilon * param.grad / norm
+                    param.data.add_(r_adv)
 
     def restore(self):
-        """restore embedding"""
+        """ restore embedding """
         for name, param in self.model.named_parameters():
             if param.requires_grad and re.search("|".join(self.emb_names), name):
                 assert name in self.emb_backup
@@ -80,8 +80,8 @@ class PGD(object):
                     self.emb_backup[name] = param.data.clone()
                 norm = torch.norm(param.grad)
                 if norm != 0 and not torch.isnan(norm):
-                    r_at = self.alpha * param.grad / norm
-                    param.data.add_(r_at)
+                    r_adv = self.alpha * param.grad / norm
+                    param.data.add_(r_adv)
                     param.data = self.project(name, param.data)
 
     def restore(self):
@@ -93,10 +93,10 @@ class PGD(object):
         self.emb_backup = {}
 
     def project(self, param_name, param_data):
-        r = param_data - self.emb_backup[param_name]
-        if torch.norm(r) > self.epsilon:
-            r = self.epsilon * r / torch.norm(r)
-        return self.emb_backup[param_name] + r
+        r_adv = param_data - self.emb_backup[param_name]
+        if torch.norm(r_adv) > self.epsilon:
+            r_adv_0 = self.epsilon * r_adv / torch.norm(r_adv)
+        return self.emb_backup[param_name] + r_adv
 
     def backup_grad(self):
         for name, param in self.model.named_parameters():

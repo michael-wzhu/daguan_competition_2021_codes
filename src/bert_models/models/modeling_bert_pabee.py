@@ -18,17 +18,17 @@ from src.classic_models.models.encoders import BiLSTMEncoder
 logger = logging.getLogger(__name__)
 
 
-class BertEncoderWithPabee(BertEncoder):
-    def adaptive_forward(self, hidden_states, current_layer, attention_mask=None, head_mask=None):
-        layer_outputs = self.layer[current_layer](
-            hidden_states,
-            attention_mask,
-            head_mask[current_layer],
-        )
-
-        hidden_states = layer_outputs[0]
-
-        return hidden_states
+# class BertEncoderWithPabee(BertEncoder):
+#     def adaptive_forward(self, hidden_states, current_layer, attention_mask=None, head_mask=None):
+#         layer_outputs = self.layer[current_layer](
+#             hidden_states,
+#             attention_mask,
+#             head_mask[current_layer],
+#         )
+#
+#         hidden_states = layer_outputs[0]
+#
+#         return hidden_states
 
 
 class ClsBERTWithPABEE(BertPreTrainedModel):
@@ -125,29 +125,30 @@ class ClsBERTWithPABEE(BertPreTrainedModel):
             label_ids_level_1=None,
             label_ids_level_2=None,
             ):
+
         outputs = self.bert(input_ids,
                             attention_mask=attention_mask,
                             token_type_ids=token_type_ids,
-                            output_hidden_states=True
+                            output_hidden_states=True,
                             )  # sequence_output, pooled_output, (hidden_states), (attentions)
         sequence_output = outputs[0]
         bert_pooled_output = outputs[1]  # [CLS]
 
         # 每层的隐含状态
         all_hidden_states = outputs[2]
-        assert len(all_hidden_states) == self.config.num_hidden_layers
+        assert len(all_hidden_states) == self.config.num_hidden_layers + 1
 
         # 每层的池化结果;
         all_pooled_outputs = []
         for i in range(self.config.num_hidden_layers):
-            hid_state = all_hidden_states[i]
+            hid_state = all_hidden_states[i + 1]
             bert_pooled_output = self.bert.pooler(hid_state)
 
             list_pooled_outpts = []
             if "bert_pooler" in self.aggregator_names:
                 list_pooled_outpts.append(bert_pooled_output)
             for aggre_op in self.aggregators:
-                pooled_outputs_ = aggre_op(sequence_output, mask=attention_mask)
+                pooled_outputs_ = aggre_op(hid_state, mask=attention_mask)
                 list_pooled_outpts.append(pooled_outputs_)
             pooled_outputs = sum(list_pooled_outpts)
             all_pooled_outputs.append(pooled_outputs)

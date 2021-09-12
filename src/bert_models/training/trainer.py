@@ -369,7 +369,6 @@ class Trainer(object):
                 for layer_idx in range(self.config.num_hidden_layers)
             }
 
-
         self.model.eval()
 
         for batch in tqdm(eval_dataloader, desc="Evaluating"):

@@ -187,7 +187,7 @@ if __name__ == '__main__':
                         help="aversarial training should be in type selected in the list: [fgm, pgd, None]；"
                              "if None, no aversarial training")
     parser.add_argument(
-        "--emb_names", default="word_embedding", type=str,
+        "--emb_names", default="word_embedding,encoder.layer.0", type=str,
         help="params to attack during aversarial training; combined with comma"
     )
     parser.add_argument("--at_rate", default=0.5, type=float,

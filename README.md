@@ -99,4 +99,4 @@ nohup python src/bert_models/training/main.py
 |          - +  ce + NTXENT loss (系数0.5, gamma 0.07)                |       0.526         |  
 |          - +  multi-sample dropout (0.4, num=4, sum)                |       0.543         |  
 |        daguan-bert-base-v0 (lr: 2e-5)              |       0.5512         |  
-|        daguan-bert-base-v1                |       0.5552         |  
+|        daguan-bert-base-v1 (lr: 1e-5)               |       0.5552         |  
