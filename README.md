@@ -100,3 +100,9 @@ nohup python src/bert_models/training/main.py
 |          - +  multi-sample dropout (0.4, num=4, sum)                |       0.543         |  
 |        daguan-bert-base-v0 (lr: 2e-5)              |       0.5512         |  
 |        daguan-bert-base-v1 (lr: 1e-5)               |       0.5552         |  
+
+
+### Q&A
+
+for further questions, contact me via wechat. 可以直接加我微信，欢迎前来交流算法竞赛经验。
+![Alt text](./assets/微信_二维码.jpg)
